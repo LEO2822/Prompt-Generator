@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Prompt Generator</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --background-color: #f3f4f6;
+            --card-background: #ffffff;
+            --text-color: #1f2937;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .card {
+            background-color: var(--card-background);
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        select, textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        button:disabled {
+            background-color: #93c5fd;
+            cursor: not-allowed;
+        }
+
+        #result {
+            display: none;
+            margin-top: 2rem;
+        }
+
+        .result-content {
+            background-color: #f8fafc;
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            white-space: pre-wrap;
+        }
+
+        .copy-button {
+            background-color: #4b5563;
+            margin-top: 1rem;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            color: #dc2626;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        /* Markdown Styles */
+        .result-content h1 { font-size: 1.8em; margin: 0.5em 0; }
+        .result-content h2 { font-size: 1.5em; margin: 0.5em 0; }
+        .result-content h3 { font-size: 1.3em; margin: 0.5em 0; }
+        .result-content code {
+            background-color: #f1f5f9;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .result-content pre {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            padding: 1em;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+        .result-content pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+        .result-content ul, .result-content ol {
+            padding-left: 2em;
+            margin: 0.5em 0;
+        }
+        .result-content blockquote {
+            border-left: 4px solid #cbd5e1;
+            margin: 0.5em 0;
+            padding-left: 1em;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AI Prompt Generator</h1>
+            <p>Generate optimized prompts for different programming tasks</p>
+        </header>
+
+        <div class="card">
+            <form id="promptForm">
+                <div class="form-group">
+                    <label for="taskType">Task Type:</label>
+                    <select id="taskType" required>
+                        <option value="">Select a task type</option>
+                        <option value="code_generation">Code Generation</option>
+                        <option value="bug_fixing">Bug Fixing</option>
+                        <option value="project_architecture">Project Architecture</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="userInput">Description or Context:</label>
+                    <textarea id="userInput" required placeholder="Enter your requirements or context here..."></textarea>
+                </div>
+
+                <button type="submit">Generate Prompt</button>
+            </form>
+
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>Generating prompt...</p>
+            </div>
+
+            <div class="error" id="errorMessage"></div>
+
+            <div id="result">
+                <h2>Generated Prompt:</h2>
+                <div class="result-content" id="generatedPrompt"></div>
+                <button class="copy-button" onclick="copyToClipboard()">Copy to Clipboard</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('promptForm');
+        const loading = document.querySelector('.loading');
+        const result = document.getElementById('result');
+        const errorMessage = document.getElementById('errorMessage');
+        const generatedPrompt = document.getElementById('generatedPrompt');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const taskType = document.getElementById('taskType').value;
+            const userInput = document.getElementById('userInput').value;
+
+            // Show loading, hide result and error
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            errorMessage.style.display = 'none';
+            
+            try {
+                const response = await fetch('http://localhost:8000/generate_prompt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        task_type: taskType,
+                        user_input: userInput
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to generate prompt');
+                }
+
+                // Use marked to render markdown
+                generatedPrompt.innerHTML = marked.parse(data.prompt);
+                result.style.display = 'block';
+            } catch (error) {
+                errorMessage.textContent = error.message;
+                errorMessage.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        });
+
+        function copyToClipboard() {
+            const promptText = document.getElementById('generatedPrompt').textContent;
+            navigator.clipboard.writeText(promptText).then(() => {
+                const copyButton = document.querySelector('.copy-button');
+                const originalText = copyButton.textContent;
+                copyButton.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyButton.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Configure marked options for better security
+        marked.setOptions({
+            headerIds: false,
+            mangle: false
+        });
+    </script>
+</body>
+</html> 

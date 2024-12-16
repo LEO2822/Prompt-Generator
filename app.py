@@ -2,6 +2,9 @@
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi import Request
 from pydantic import BaseModel
 from prompt_generator import generate_prompt
 from typing import Optional
@@ -21,6 +24,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount templates directory
+templates = Jinja2Templates(directory="templates")
+
+@app.get("/")
+async def home(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
 # Request model
 class PromptRequest(BaseModel):
     task_type: str
@@ -32,14 +42,6 @@ class PromptResponse(BaseModel):
     task_type: str
     status: str = "success"
     error: Optional[str] = None
-
-@app.get("/")
-def read_root():
-    return {
-        "message": "Welcome to Prompt Generator API",
-        "status": "active",
-        "version": "1.0.0"
-    }
 
 @app.post("/generate_prompt", response_model=PromptResponse)
 async def create_prompt(request: PromptRequest):
